@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2b1d5c"/>
+      <stop offset="1" stop-color="#6a2c91"/>
+    </linearGradient>
+  </defs>
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="url(#bg)"/>
+  <!-- main line -->
+  <line x1="384" y1="240" x2="384" y2="784" stroke="#ff8a3d" stroke-width="56" stroke-linecap="round"/>
+  <!-- branch curve -->
+  <path d="M384 640 C384 520 640 540 640 420 L640 340" fill="none" stroke="#3ddcb0" stroke-width="56" stroke-linecap="round"/>
+  <!-- commits -->
+  <circle cx="384" cy="240" r="72" fill="#ff8a3d" stroke="#2b1d5c" stroke-width="20"/>
+  <circle cx="384" cy="784" r="72" fill="#ff8a3d" stroke="#4a2577" stroke-width="20"/>
+  <circle cx="640" cy="300" r="72" fill="#3ddcb0" stroke="#3a2270" stroke-width="20"/>
+</svg>
