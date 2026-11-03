@@ -207,3 +207,135 @@ pub fn show_commit(repo: &str, hash: &str) -> Result<String, String> {
         ],
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::path::PathBuf;
+
+    struct TempRepo(PathBuf);
+    impl Drop for TempRepo {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+    impl TempRepo {
+        fn new(name: &str) -> Self {
+            let dir = std::env::temp_dir().join(format!("gitbench-test-{name}-{}", std::process::id()));
+            let _ = fs::remove_dir_all(&dir);
+            fs::create_dir_all(&dir).unwrap();
+            let r = TempRepo(dir);
+            r.git(&["init", "-q", "-b", "main"]);
+            r.git(&["config", "user.name", "Test User"]);
+            r.git(&["config", "user.email", "test@example.com"]);
+            r.git(&["config", "commit.gpgsign", "false"]);
+            r
+        }
+        fn path(&self) -> &str {
+            self.0.to_str().unwrap()
+        }
+        fn git(&self, args: &[&str]) -> String {
+            run(self.path(), args).unwrap()
+        }
+        fn write(&self, file: &str, body: &str) {
+            fs::write(self.0.join(file), body).unwrap();
+        }
+    }
+
+    #[test]
+    fn empty_repo_has_no_commits() {
+        let r = TempRepo::new("empty");
+        assert!(log(r.path(), 100, true).unwrap().is_empty());
+        assert_eq!(open_repo(r.path()).unwrap().head, "main");
+    }
+
+    #[test]
+    fn not_a_repo_errors() {
+        let dir = std::env::temp_dir();
+        let missing = dir.join("gitbench-definitely-missing");
+        assert!(open_repo(missing.to_str().unwrap()).is_err());
+    }
+
+    #[test]
+    fn log_parses_commits_refs_and_special_subjects() {
+        let r = TempRepo::new("log");
+        r.write("a.txt", "one\n");
+        r.git(&["add", "."]);
+        r.git(&["commit", "-q", "-m", "first, with comma | pipe"]);
+        r.git(&["tag", "v1"]);
+        r.write("a.txt", "two\n");
+        r.git(&["commit", "-q", "-am", "second"]);
+
+        let commits = log(r.path(), 100, true).unwrap();
+        assert_eq!(commits.len(), 2);
+        assert_eq!(commits[0].subject, "second");
+        assert_eq!(commits[0].parents.len(), 1);
+        assert_eq!(commits[0].author, "Test User");
+        assert!(commits[0].refs.iter().any(|x| x == "HEAD -> main"));
+        assert_eq!(commits[1].subject, "first, with comma | pipe");
+        assert!(commits[1].parents.is_empty());
+        assert!(commits[1].refs.iter().any(|x| x == "tag: v1"));
+        assert_eq!(commits[0].parents[0], commits[1].hash);
+    }
+
+    #[test]
+    fn branches_list_current() {
+        let r = TempRepo::new("branches");
+        r.write("a.txt", "x\n");
+        r.git(&["add", "."]);
+        r.git(&["commit", "-q", "-m", "init"]);
+        r.git(&["branch", "feature/x"]);
+        let b = branches(r.path()).unwrap();
+        assert_eq!(b.len(), 2);
+        assert!(b.iter().any(|b| b.name == "main" && b.current && !b.remote));
+        assert!(b.iter().any(|b| b.name == "feature/x" && !b.current));
+    }
+
+    #[test]
+    fn status_handles_modified_untracked_rename_and_spaces() {
+        let r = TempRepo::new("status");
+        r.write("keep.txt", "k\n");
+        r.write("old name.txt", "rename me\n");
+        r.git(&["add", "."]);
+        r.git(&["commit", "-q", "-m", "init"]);
+
+        r.write("keep.txt", "changed\n");
+        r.write("new file.txt", "new\n");
+        r.git(&["mv", "old name.txt", "new name.txt"]);
+
+        let s = status(r.path()).unwrap();
+        let find = |p: &str| s.iter().find(|f| f.path == p).unwrap();
+        let m = find("keep.txt");
+        assert_eq!((m.index, m.worktree), (' ', 'M'));
+        let u = find("new file.txt");
+        assert_eq!((u.index, u.worktree), ('?', '?'));
+        let rn = find("new name.txt");
+        assert_eq!(rn.index, 'R');
+        assert_eq!(rn.orig_path.as_deref(), Some("old name.txt"));
+        assert_eq!(s.len(), 3);
+    }
+
+    #[test]
+    fn diffs_for_unstaged_staged_untracked_and_commit() {
+        let r = TempRepo::new("diff");
+        r.write("a.txt", "one\n");
+        r.git(&["add", "."]);
+        r.git(&["commit", "-q", "-m", "init"]);
+
+        r.write("a.txt", "two\n");
+        let d = diff_file(r.path(), "a.txt", false, false).unwrap();
+        assert!(d.contains("-one") && d.contains("+two"));
+
+        r.git(&["add", "a.txt"]);
+        assert!(diff_file(r.path(), "a.txt", false, false).unwrap().is_empty());
+        assert!(diff_file(r.path(), "a.txt", true, false).unwrap().contains("+two"));
+
+        r.write("b.txt", "brand new\n");
+        assert!(diff_file(r.path(), "b.txt", false, true).unwrap().contains("+brand new"));
+
+        let head = r.git(&["rev-parse", "HEAD"]);
+        let show = show_commit(r.path(), head.trim()).unwrap();
+        assert!(show.contains("Author: Test User") && show.contains("+one"));
+    }
+}

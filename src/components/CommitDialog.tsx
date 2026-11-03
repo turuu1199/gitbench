@@ -75,7 +75,11 @@ export function CommitDialog({ repo, onClose }: Props) {
         className={active ? "active" : ""}
         onClick={() => setSelected({ path: f.path, staged: isStaged, untracked })}
         onDoubleClick={() =>
-          run(() => (isStaged ? api.unstage : api.stage)(repo, [f.path]))
+          run(async () => {
+            await (isStaged ? api.unstage : api.stage)(repo, [f.path]);
+            // Follow the file to the other list so the diff pane stays relevant.
+            setSelected({ path: f.path, staged: !isStaged, untracked: isStaged && f.index === "A" });
+          })
         }
         title="Double-click to stage / unstage"
       >
