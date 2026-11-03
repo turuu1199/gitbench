@@ -7,12 +7,15 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test": "npm run test:lib && cd src-tauri && cargo test --lib",
+    "test:lib": "tsc --ignoreConfig src/lib/patch.ts src/lib/graph.ts --outDir .test-build --module es2020 --target es2020 --skipLibCheck && node tests/lib.test.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-dialog": "^2.8.4",
     "@tauri-apps/plugin-opener": "^2",
+    "lucide-react": "^0.460.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
