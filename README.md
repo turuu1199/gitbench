@@ -142,5 +142,6 @@ tests/lib.test.mjs     partial staging + graph tests
 
 ## License
 
-Not chosen yet. Git Extensions is GPL-3.0. If any of its code is ever copied into
-this project, this project must also be GPL-3.0.
+[MIT](LICENSE) © 2026 turmandakh
+
+gitbench is an independent project and is not affiliated with Git Extensions.
