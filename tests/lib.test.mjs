@@ -86,3 +86,34 @@ console.log("ok graph lanes");
   assert.equal(readFileSync(join(dir2, "x"), "utf8"), "1\nTWO\n3\n"); console.log("ok reverse reset pair");
   rmSync(dir2, { recursive: true, force: true });
 }
+
+// ---------------------------------------------------------------- conflicts
+{
+  const { parseConflicts, buildResult, hasMarkers } = await import("../.test-build/lib/conflict.js");
+  for (const style of ["merge", "diff3"]) {
+    const cd = mkdtempSync(join(tmpdir(), "gb-conf-"));
+    const g = (args) => { try { return execFileSync("git", ["-C", cd, "-c", `merge.conflictStyle=${style}`, ...args], { encoding: "utf8", stdio: "pipe" }); } catch (e) { return e.stdout; } };
+    g(["init", "-q", "-b", "main"]); g(["config", "user.name", "T"]); g(["config", "user.email", "t@e"]);
+    writeFileSync(join(cd, "f.txt"), "a\nb\nc\nd\ne\nx\ny\nz\nf\ng\n"); g(["add", "."]); g(["commit", "-qm", "base"]);
+    g(["switch", "-qc", "other"]);
+    writeFileSync(join(cd, "f.txt"), "a\nB-theirs\nc\nd\ne\nx\ny\nz\nF-theirs\ng\n"); g(["commit", "-qam", "theirs"]);
+    g(["switch", "-q", "main"]);
+    writeFileSync(join(cd, "f.txt"), "a\nB-ours\nc\nd\ne\nx\ny\nz\nF-ours\ng\n"); g(["commit", "-qam", "ours"]);
+    g(["merge", "other"]);
+    const text = readFileSync(join(cd, "f.txt"), "utf8");
+    const segs = parseConflicts(text);
+    const cs = segs.filter((s) => s.kind === "conflict");
+    assert.equal(cs.length, 2, `${style}: two conflicts`);
+    assert.equal(cs[0].ours, "B-ours\n"); assert.equal(cs[0].theirs, "B-theirs\n");
+    assert.equal(cs[0].oursLabel, "HEAD"); assert.equal(cs[0].theirsLabel, "other");
+    assert.equal(cs[0].base, style === "diff3" ? "b\n" : null);
+    assert.equal(buildResult(segs, []), text, `${style}: round-trip unresolved`);
+    assert.equal(buildResult(segs, ["ours", "theirs-ours"]), "a\nB-ours\nc\nd\ne\nx\ny\nz\nF-theirs\nF-ours\ng\n");
+    assert.ok(hasMarkers(buildResult(segs, ["theirs"])) && !hasMarkers(buildResult(segs, ["theirs", "ours"])));
+    rmSync(cd, { recursive: true, force: true });
+    console.log(`ok parse ${style} conflicts`);
+  }
+  assert.equal(parseConflicts("x\n<<<<<<< a\nno end\n").length, 1, "unterminated block stays text");
+  assert.equal(parseConflicts("a\r\n<<<<<<< HEAD\r\no\r\n=======\r\nt\r\n>>>>>>> b\r\n")[1].ours, "o\r\n", "CRLF");
+  console.log("ok malformed + CRLF");
+}

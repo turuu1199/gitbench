@@ -284,7 +284,11 @@ pre.output { max-height: 50vh; overflow: auto; white-space: pre-wrap; font: 12px
 .menu { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; box-shadow: var(--shadow); padding: 4px; min-width: 220px; user-select: none; }
 .menu-item { position: relative; display: flex; align-items: center; gap: 6px; padding: 4px 8px 4px 4px; border-radius: 4px; cursor: default; white-space: nowrap; }
 .menu-item:hover:not(.disabled) { background: var(--accent); color: var(--accent-text); }
-.menu-item:hover:not(.disabled) .menu-shortcut { color: inherit; }
+.menu-item:hover:not(.disabled) .menu-label-2 { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+.menu-label-2 > span:first-child { font-weight: 600; }
+.menu-hint { color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; }
+.menu-item:hover:not(.disabled) .menu-hint { color: inherit; opacity: 0.8; }
+.menu-shortcut { color: inherit; }
 .menu-item.disabled { opacity: 0.45; }
 .menu-item.danger:not(.disabled) { color: var(--danger); }
 .menu-item.danger:hover:not(.disabled) { background: var(--danger); color: #fff; }
@@ -333,3 +337,31 @@ pre.output { max-height: 50vh; overflow: auto; white-space: pre-wrap; font: 12px
 .simple-table td.msg { width: 55%; }
 .simple-table tr:hover { background: var(--hover); }
 .simple-table tr.active { background: var(--sel); }
+
+/* ---------------------------------------------------------------- conflict resolver */
+.cr-toolbar { gap: 6px; }
+.cr-toolbar button:not(.icon-btn) { padding: 1px 8px; }
+.cr-body { padding: 8px; gap: 2px; }
+.cr-code { margin: 0; padding: 2px 8px; font: 12px/1.45 ui-monospace, Menlo, Consolas, monospace; white-space: pre; overflow-x: auto; }
+.cr-ctx { color: var(--muted); }
+.cr-fold { align-self: flex-start; margin: 2px 8px; padding: 0 8px; font-size: 11px; color: var(--muted); }
+.cr-block { border: 1px solid var(--warn-border); border-radius: 6px; margin: 4px 0; overflow: hidden; flex: none; }
+.cr-block.done { border-color: var(--add); }
+.cr-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 4px 8px; background: var(--warn-bg); }
+.cr-block.done .cr-actions { background: var(--add-bg); }
+.cr-actions b { margin-right: 6px; }
+.cr-actions button { padding: 1px 8px; }
+.cr-sides { display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; }
+.cr-sides > div { min-width: 0; border-left: 1px solid var(--border); }
+.cr-sides > div:first-child { border-left: 0; }
+.cr-label { font-size: 11px; padding: 2px 8px; color: var(--muted); border-bottom: 1px solid var(--border); }
+.cr-label.ours { color: var(--accent); }
+.cr-label.theirs { color: var(--add); }
+.cr-code.ours { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.cr-code.theirs { background: var(--add-bg); }
+.cr-result { background: var(--bg); }
+.cr-manual { flex: 1; min-height: 300px; resize: none; font: 12px/1.45 ui-monospace, Menlo, Consolas, monospace; white-space: pre; }
+.cr-footer { align-items: center; gap: 8px; padding: 6px 10px; }
+.cr-footer .danger-text { color: var(--danger); white-space: pre-wrap; }
+.cr-done { padding: 12px; border-top: 1px solid var(--border); }
+.cr-done p { margin: 0 0 8px; }

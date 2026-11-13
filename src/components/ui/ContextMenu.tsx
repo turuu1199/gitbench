@@ -4,6 +4,8 @@ export type MenuItem =
   | { separator: true }
   | {
       label: string;
+      /** Secondary dim line under the label (e.g. parent path). */
+      hint?: string;
       onClick?: () => void;
       disabled?: boolean;
       danger?: boolean;
@@ -50,7 +52,14 @@ export function MenuList({ items, onDone }: { items: MenuItem[]; onDone: () => v
             }}
           >
             <span className="menu-check">{it.checked ? "✓" : ""}</span>
-            <span className="menu-label">{it.label}</span>
+            {it.hint ? (
+              <span className="menu-label menu-label-2">
+                <span>{it.label}</span>
+                <span className="menu-hint" title={it.hint}>{"\u200e" + it.hint + "\u200e"}</span>
+              </span>
+            ) : (
+              <span className="menu-label">{it.label}</span>
+            )}
             {it.shortcut && <span className="menu-shortcut">{it.shortcut}</span>}
             {it.submenu && <span className="menu-arrow">▸</span>}
             {it.submenu && sub === i && !it.disabled && (

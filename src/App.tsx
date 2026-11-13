@@ -19,6 +19,7 @@ import { basename, errorText } from "./lib/format";
 import { Actions, INDEX, RepoContext, RepoData, stripRemote, WORKTREE } from "./repo";
 import { BottomPanel } from "./components/BottomPanel";
 import { CommitDialog } from "./components/CommitDialog";
+import { ConflictResolver } from "./components/ConflictResolver";
 import { Dashboard, loadRecent, touchRecent } from "./components/Dashboard";
 import { FileHistory } from "./components/FileHistory";
 import { RevisionGrid } from "./components/RevisionGrid";
@@ -60,6 +61,7 @@ export default function App() {
   const [dashError, setDashError] = useState("");
   const [filter, setFilter] = useState("");
   const [showCommit, setShowCommit] = useState(false);
+  const [showConflicts, setShowConflicts] = useState(false);
   const [historyPath, setHistoryPath] = useState<string | null>(null);
   const [allBranches, setAllBranches] = useState(() => pref("allBranches", "1") === "1");
   const [showLeft, setShowLeft] = useState(() => pref("showLeft", "1") === "1");
@@ -226,6 +228,7 @@ export default function App() {
           return [cur[0] ?? hash, hash].filter((v, i, arr) => arr.indexOf(v) === i).slice(0, 2);
         }),
       openCommitDialog: () => setShowCommit(true),
+      openConflicts: () => setShowConflicts(true),
       openFileHistory: (p) => setHistoryPath(p),
 
       checkoutBranch: (name) => run(`Checkout ${name}`, () => ops.checkout(root, name)),
@@ -582,7 +585,12 @@ export default function App() {
 
   const recentMenu: MenuItem[] = loadRecent()
     .slice(0, 15)
-    .map((r) => ({ label: r.path, onClick: () => openRepo(r.path) }));
+    .map((r) => {
+      const name = basename(r.path);
+      const parent = r.path.slice(0, r.path.length - name.length).replace(/[\\/]+$/, "");
+      const isCur = r.path === data?.info.root;
+      return { label: name, hint: parent, checked: isCur, onClick: () => openRepo(r.path) };
+    });
 
   const sel = selected[0];
   const selCommit = data?.commits.find((c) => c.hash === sel);
@@ -720,6 +728,7 @@ export default function App() {
               },
             },
             sep,
+            { label: "Resolve conflicts…", disabled: !data.status.some(isConflict), onClick: () => setShowConflicts(true) },
             { label: `Continue ${state}`, disabled: !state, onClick: () => actions.sequencer("continue") },
             { label: `Skip commit (${state || "rebase"})`, disabled: state !== "rebasing" && state !== "cherry-picking", onClick: () => actions.sequencer("skip") },
             { label: `Abort ${state}`, disabled: !state, danger: true, onClick: () => actions.sequencer("abort") },
@@ -926,7 +935,12 @@ export default function App() {
         {state && (
           <div className="banner warn">
             <b>{state[0].toUpperCase() + state.slice(1)} in progress.</b>
-            {conflicts > 0 ? ` ${conflicts} conflicted file${conflicts > 1 ? "s" : ""} — resolve them in the commit dialog.` : " No conflicts left."}
+            {conflicts > 0 ? ` ${conflicts} conflicted file${conflicts > 1 ? "s" : ""}.` : " No conflicts left."}
+            {conflicts > 0 && (
+              <button className="primary" onClick={() => setShowConflicts(true)}>
+                Resolve conflicts…
+              </button>
+            )}
             <button onClick={() => setShowCommit(true)}>Open commit dialog</button>
             <button disabled={conflicts > 0} onClick={() => actions.sequencer("continue")}>
               Continue
@@ -975,6 +989,14 @@ export default function App() {
           onClose={(committed) => {
             setShowCommit(false);
             if (committed) setStatus(committed);
+            refresh();
+          }}
+        />
+      )}
+      {showConflicts && (
+        <ConflictResolver
+          onClose={() => {
+            setShowConflicts(false);
             refresh();
           }}
         />

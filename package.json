@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "test": "npm run test:lib && cd src-tauri && cargo test --lib",
-    "test:lib": "tsc --ignoreConfig src/lib/patch.ts src/lib/graph.ts --outDir .test-build --module es2020 --target es2020 --skipLibCheck && node tests/lib.test.mjs"
+    "test:lib": "tsc --ignoreConfig src/lib/patch.ts src/lib/graph.ts src/lib/conflict.ts --outDir .test-build --module es2020 --target es2020 --skipLibCheck && node tests/lib.test.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

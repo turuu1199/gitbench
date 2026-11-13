@@ -119,6 +119,9 @@ export const api = {
   lsTree: (repo: string, hash: string) => invoke<string[]>("ls_tree", { repo, hash }),
   fileAt: (repo: string, hash: string, path: string) => invoke<string>("file_at", { repo, hash, path }),
   appendGitignore: (repo: string, pattern: string) => invoke<void>("append_gitignore", { repo, pattern }),
+  readWorktreeFile: (repo: string, path: string) => invoke<string>("read_worktree_file", { repo, path }),
+  writeWorktreeFile: (repo: string, path: string, content: string) =>
+    invoke<void>("write_worktree_file", { repo, path, content }),
   blame: (repo: string, path: string, hash?: string | null) =>
     invoke<BlameLine[]>("blame", { repo, path, hash: hash ?? null }),
 };

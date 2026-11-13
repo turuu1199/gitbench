@@ -130,6 +130,16 @@ async fn append_gitignore(repo: String, pattern: String) -> R<()> {
     git::append_gitignore(&repo, &pattern)
 }
 
+#[tauri::command]
+async fn read_worktree_file(repo: String, path: String) -> R<String> {
+    git::read_worktree_file(&repo, &path)
+}
+
+#[tauri::command]
+async fn write_worktree_file(repo: String, path: String, content: String) -> R<()> {
+    git::write_worktree_file(&repo, &path, &content)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -156,7 +166,9 @@ pub fn run() {
             ls_tree,
             file_at,
             blame,
-            append_gitignore
+            append_gitignore,
+            read_worktree_file,
+            write_worktree_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

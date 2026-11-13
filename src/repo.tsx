@@ -22,6 +22,7 @@ export interface Actions {
   run: (label: string, fn: () => Promise<unknown>, opts?: { quiet?: boolean; noRefresh?: boolean }) => Promise<boolean>;
   select: (hash: string, add?: boolean) => void;
   openCommitDialog: () => void;
+  openConflicts: () => void;
   openFileHistory: (path: string, rev?: string) => void;
 
   checkoutBranch: (name: string) => void;

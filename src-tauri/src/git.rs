@@ -633,6 +633,37 @@ pub fn append_gitignore(repo: &str, pattern: &str) -> Result<(), String> {
     std::fs::write(&file, out).map_err(|e| e.to_string())
 }
 
+// ---------------------------------------------------------------- worktree files
+
+/// Resolve `path` (relative to the repo root) to a file inside the working
+/// tree, refusing absolute paths and `..` so the UI cannot escape the repo.
+fn worktree_path(repo: &str, path: &str) -> Result<std::path::PathBuf, String> {
+    use std::path::Component;
+    let rel = Path::new(path);
+    if path.is_empty() || !rel.components().all(|c| matches!(c, Component::Normal(_) | Component::CurDir)) {
+        return Err(format!("invalid path: {path}"));
+    }
+    let root = run(repo, &["rev-parse", "--show-toplevel"])?.trim().to_string();
+    Ok(Path::new(&root).join(rel))
+}
+
+/// Read a working-tree file as text (used by the conflict resolver).
+pub fn read_worktree_file(repo: &str, path: &str) -> Result<String, String> {
+    let bytes = std::fs::read(worktree_path(repo, path)?).map_err(|e| e.to_string())?;
+    if bytes.len() > MAX_VIEW_BYTES {
+        return Err(format!("file too large to edit here: {} bytes", bytes.len()));
+    }
+    if bytes.iter().take(8000).any(|&b| b == 0) {
+        return Err("binary file".into());
+    }
+    String::from_utf8(bytes).map_err(|_| "file is not valid UTF-8".into())
+}
+
+/// Overwrite a working-tree file with `content`.
+pub fn write_worktree_file(repo: &str, path: &str, content: &str) -> Result<(), String> {
+    std::fs::write(worktree_path(repo, path)?, content).map_err(|e| e.to_string())
+}
+
 // ---------------------------------------------------------------- tests
 
 #[cfg(test)]
@@ -841,6 +872,13 @@ mod tests {
         assert_eq!(open_repo(r.path()).unwrap().state, "merging");
         let s = status(r.path()).unwrap();
         assert_eq!((s[0].index, s[0].worktree), ('U', 'U'));
+        let text = read_worktree_file(r.path(), "a.txt").unwrap();
+        assert!(text.contains("<<<<<<< HEAD\nours\n=======\ntheirs\n>>>>>>> other"));
+        write_worktree_file(r.path(), "a.txt", "ours\ntheirs\n").unwrap();
+        r.git(&["add", "a.txt"]);
+        assert!(status(r.path()).unwrap().iter().all(|f| f.index != 'U'));
+        assert!(read_worktree_file(r.path(), "../x").is_err());
+        assert!(write_worktree_file(r.path(), "/etc/x", "").is_err());
         r.git(&["merge", "--abort"]);
         assert_eq!(open_repo(r.path()).unwrap().state, "");
     }

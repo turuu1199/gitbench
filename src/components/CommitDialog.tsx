@@ -164,6 +164,7 @@ export function CommitDialog({ onClose }: Props) {
     if (conflict)
       items.push(
         sep,
+        { label: "Resolve conflicts…", onClick: () => (onClose(), actions.openConflicts()) },
         { label: "Resolve: use ours (current branch)", onClick: () => run(() => api.git(root, ["checkout", "--ours", "--", ...paths]).then(() => ops.stage(root, paths))) },
         { label: "Resolve: use theirs (incoming)", onClick: () => run(() => api.git(root, ["checkout", "--theirs", "--", ...paths]).then(() => ops.stage(root, paths))) },
         { label: "Mark as resolved", onClick: () => stage(paths) },
@@ -307,7 +308,10 @@ export function CommitDialog({ onClose }: Props) {
         </header>
         {conflicts > 0 && (
           <div className="banner warn">
-            {conflicts} conflicted file{conflicts > 1 ? "s" : ""}. Right-click to resolve with ours/theirs, or edit and mark as resolved.
+            {conflicts} conflicted file{conflicts > 1 ? "s" : ""}.
+            <button className="primary" onClick={() => (onClose(), actions.openConflicts())}>
+              Resolve conflicts…
+            </button>
           </div>
         )}
         <div className="commit-main">
